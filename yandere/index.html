@@ -1,147 +1,178 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en">
 
 <head>
-	<base href="https://cdn.jsdelivr.net/gh/genizy/web-port@master/yandere-simulator/">
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>YandereSimulator</title>
-    <script src="Build/UnityLoader.js"></script>
+    <script>
+        // ACCESS CHECK - MUST RUN FIRST BEFORE ANYTHING ELSE
+        (function() {
+            if (sessionStorage.getItem("access") !== "granted") {
+                document.documentElement.innerHTML = '';
+                document.body.innerHTML = '';
+                document.title = "Access Denied";
+                document.body.style.cssText = `
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    background: #0f1115;
+                    color: #e6e6eb;
+                    font-family: Arial, sans-serif;
+                `;
+                document.body.innerHTML = `
+                    <div style="text-align: center;">
+                        <h1>Access Denied</h1>
+                        <p>You must enter the correct access code first.</p>
+                        <button onclick="window.location.href = '/';" style="
+                            padding: 10px 20px;
+                            background: #e6e6eb;
+                            color: #0f1115;
+                            border: none;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 16px;
+                        ">Go Back to Home</button>
+                    </div>
+                `;
+                throw new Error('Access denied');
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yandere Simulator</title>
     <style>
-        html,
-        body {
+        html, body {
+            background-color: #0f1115;
             margin: 0;
             padding: 0;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            color: #e6e6eb;
+            font-family: Arial, sans-serif;
+        }
+        
+        #loading-screen {
+            position: fixed;
             width: 100%;
             height: 100%;
-            background: #000;
-            overflow: hidden;
-        }
-
-        #unityContainer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #000;
-        }
-
-        #unityContainer canvas {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
+            background: #0f1115;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: cursive;
+            z-index: 10;
         }
 
         #loading-text {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 48px;
-            font-family: cursive;
-            text-align: center;
+            font-size: 40px;
+            margin-bottom: 20px;
+        }
+
+        #loading-bar {
+            width: 300px;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #progress {
+            width: 0%;
+            height: 100%;
+            background: #4caf50;
+            transition: width 0.2s;
         }
     </style>
+</head>
 
-    <script type="module">
-        import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics@2.0.1/dist/index.mjs';
-        inject();
-    </script>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div id="loading-text">LOADING...</div>
+        <div id="loading-bar">
+            <div id="progress"></div>
+        </div>
+    </div>
+
+    <canvas id="unity-canvas" tabindex="-1" hidden></canvas>
+
+    <script src="Build/yandere.loader.js"></script>
+    <script defer src="https://cdn.vercel-analytics.com/v1/analytics.js"></script>
 
     <script>
-        let max = 0,
-            done = 0;
+        var canvas = document.querySelector("#unity-canvas");
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.width = window.innerWidth + "px";
+            canvas.style.height = window.innerHeight + "px";
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
         function mergeFiles(fileParts) {
             return new Promise((resolve, reject) => {
-                const buffers = [];
-                const fetchPart = (index) => {
+                let buffers = [];
+
+                function fetchPart(index) {
                     if (index >= fileParts.length) {
-                        const blob = new Blob(buffers);
-                        resolve(URL.createObjectURL(blob));
+                        let mergedBlob = new Blob(buffers);
+                        resolve(URL.createObjectURL(mergedBlob));
                         return;
                     }
                     fetch(fileParts[index])
                         .then(r => r.arrayBuffer())
-                        .then(b => {
-                            buffers.push(b);
-                            done++;
-                            document.querySelector("#loading-text").textContent = `LOADING... (${done}/${max})`;
+                        .then(data => {
+                            buffers.push(data);
                             fetchPart(index + 1);
                         })
                         .catch(reject);
-                };
+                }
                 fetchPart(0);
             });
         }
 
         function getParts(file, start, end) {
-            const parts = [];
-            for (let i = start; i <= end; i++) parts.push(`${file}.part${i}`);
-            max += end;
+            let parts = [];
+            for (let i = start; i <= end; i++) {
+                parts.push(file + ".part" + i);
+            }
             return parts;
         }
 
         Promise.all([
-            mergeFiles(getParts("Build/YandereSim.data.unityweb", 1, 5)),
-        ]).then(([dataUrl]) => {
-            const json = {
-                companyName: "YandereDev",
-                productName: "YandereSimulator",
+            mergeFiles(getParts("Build/yandere.data.unityweb", 1, 4)),
+            mergeFiles(getParts("Build/yandere.wasm.unityweb", 1, 2))
+        ]).then(([dataUrl, wasmurl]) => {
+
+            document.querySelector("#unity-canvas").hidden = false;
+
+            createUnityInstance(canvas, {
                 dataUrl: dataUrl,
-                wasmCodeUrl: "YandereSim.wasm.code.unityweb",
-                wasmFrameworkUrl: "YandereSim.wasm.framework.unityweb",
-                TOTAL_MEMORY: 268435456,
-                graphicsAPI: ["WebGL 2.0", "WebGL 1.0"],
-                webglContextAttributes: {
-                    preserveDrawingBuffer: false
-                },
-                splashScreenStyle: "Dark",
-                backgroundColor: "#000000",
-                cacheControl: {
-                    default: "must-revalidate"
-                }
-            };
+                frameworkUrl: "Build/yandere.framework.js.unityweb",
+                codeUrl: wasmurl,
+                streamingAssetsUrl: "StreamingAssets",
+                companyName: "Game Dev",
+                productName: "Yandere Simulator",
+                productVersion: "1.0",
+            }, (progress) => {
 
-            const blob = new Blob([JSON.stringify(json)], {
-                type: "application/json"
+                document.getElementById("progress").style.width = (progress * 100) + "%";
+
+            }).then(() => {
+
+                document.getElementById("loading-screen").style.display = "none";
+
             });
-            const blobUrl = URL.createObjectURL(blob);
-
-            const gameInstance = UnityLoader.instantiate("unityContainer", json, {
-                url: blobUrl,
-                Module: {
-                    onRuntimeInitialized: () => {
-                        const loadingText = document.querySelector("#loading-text");
-                        if (loadingText) loadingText.remove();
-                    },
-                },
-            });
-
-            const resize = () => {
-                const container = document.getElementById("unityContainer");
-                container.style.width = window.innerWidth + "px";
-                container.style.height = window.innerHeight + "px";
-            };
-            window.addEventListener("resize", resize);
-            resize();
         });
     </script>
-</head>
 
-<body>
-    <div id="loading-text" style="
-					color: white;
-					font-size: 48px;
-					font-family: 'Comic Sans MS', cursive;
-					text-align: center;
-					margin-top: 20px;
-				">
-        LOADING...
-    </div>LOADING...</div>
-    <div id="unityContainer"></div>
 </body>
 
 </html>
