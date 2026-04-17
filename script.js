@@ -1,3 +1,7 @@
+import { inject } from "@vercel/analytics"
+
+inject()
+
 const correctCode = "foidslayer911";
 
 function checkCode() {
