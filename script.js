@@ -4,7 +4,8 @@ inject()
 
 const correctCode = "foidslayer911";
 
-function checkCode() {
+// Expose functions to global scope for onclick handlers
+window.checkCode = function() {
     const input = document.getElementById("codeInput").value;
 
     if (input === correctCode) {
@@ -14,12 +15,12 @@ function checkCode() {
     }
 }
 
-function openUltrakill() {
+window.openGame = function() {
     sessionStorage.setItem("access", "granted");
     window.location.href = "ultrakill/index.html";
 }
 
-function openYandere() {
+window.openYandere = function() {
     sessionStorage.setItem("access", "granted");
     window.location.href = "yandere/index.html";
 }
